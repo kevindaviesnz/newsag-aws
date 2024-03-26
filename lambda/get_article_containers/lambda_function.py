@@ -5,13 +5,18 @@ import boto3
 
 s3_client = boto3.client('s3')
 
+def fetch_html_from_presigned_url(url:str) -> str:
+    #response = requests.get(url)
+    #response.raise_for_status()  # Raise an exception for bad status codes
+    #return response.text
+    pass
+    
+
 def lambda_handler(event, context):
 
     url = event["presigned_url"]
-    response = requests.get(event["url"])
-    response.raise_for_status()  # Raise an exception for bad status codes
-    html_content = response.text
-
+    html_content = fetch_html_from_presigned_url(url)
+    
     soup = BeautifulSoup(html_content, 'html.parser')
     tag = event["tag"]
     
@@ -40,8 +45,10 @@ def lambda_handler(event, context):
     articles_url = s3_client.generate_presigned_url(
         'get_object',
         Params={'Bucket': bucket, 'Key': s3_key},
-        ExpiresIn=172800  # URL expiration time (e.g., 1 hour)
+        ExpiresIn=432000   # URL expiration time (e.g., 5 days)
     )
+    
+    # Articles url: https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json%3FAWSAccessKeyId%3DAKIA42RD47OJM3V6Q2HU%26Signature%3DVjtNNUSaPPVJG0XyxygUIMxnJQU%253D%26Expires%3D1711854291.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=t6uNdP5KV1zFHvPWe8q8P8zODyM%3D&Expires=1711854427
 
     return {
         'statusCode': 200,
@@ -53,7 +60,7 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     
     event = {
-        "presigned_url": "https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.html?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=ayMaHoDJo4%2B%2F%2F%2F8cGQmwfJ5Jrs4%3D&Expires=1710708201",
+        "presigned_url":"https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=VjtNNUSaPPVJG0XyxygUIMxnJQU%3D&Expires=1711854291",
         "tag": "article",
         "url": "https://foxnews.com"       
     }

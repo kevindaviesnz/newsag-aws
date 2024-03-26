@@ -37,7 +37,7 @@ def lambda_handler(event, context):
     presigned_url = s3_client.generate_presigned_url(
         'get_object',
         Params={'Bucket': bucket, 'Key': s3_key},
-        ExpiresIn=172800  # URL expiration time (e.g., 1 hour)
+        ExpiresIn=432000   # URL expiration time (e.g., 5 days)
     )
 
     return {
