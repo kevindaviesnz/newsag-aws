@@ -6,13 +6,12 @@ import boto3
 s3_client = boto3.client('s3')
 
 def fetch_html_from_presigned_url(url:str) -> str:
-    #response = requests.get(url)
-    #response.raise_for_status()  # Raise an exception for bad status codes
-    #return response.text
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an exception for bad status codes
+    return response.text
     pass
-    
 
-def lambda_handler(event, context):
+def parse_html_into_containers(event, context):
 
     url = event["presigned_url"]
     html_content = fetch_html_from_presigned_url(url)

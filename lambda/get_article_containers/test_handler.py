@@ -1,5 +1,5 @@
 # This file: lambda/get_article_containers/test_handler.py
-# pip install requests --target .
+# pip3 install requests --target .
 import pytest
 
 from lambda_function import fetch_html_from_presigned_url
