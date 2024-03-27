@@ -36,10 +36,6 @@ def lambda_handler(event: list, context: list) -> list:
             ExpiresIn=432000   # URL expiration time (e.g., 5 days)
         )
 
-    except KeyError as ke:
-        # Handle missing keys in the event dictionary
-        return {'statusCode': 400, 'error': 'Missing key in the event data.'}
-
     except Exception as e:
         return {
             'statusCode':500,
@@ -49,9 +45,9 @@ def lambda_handler(event: list, context: list) -> list:
     # Articles JSON url: https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json%3FAWSAccessKeyId%3DAKIA42RD47OJM3V6Q2HU%26Signature%3DVjtNNUSaPPVJG0XyxygUIMxnJQU%253D%26Expires%3D1711854291.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=t6uNdP5KV1zFHvPWe8q8P8zODyM%3D&Expires=1711854427
     return {
         'statusCode': 200,
-        'articles_json_url': containers_json_url,
+        'containers_json_url': containers_json_url,
         'container_tag': event['container_tag'],
-        "news_site_url": event["news_site_url"]
+        'news_site_url': event['news_site_url']
     }
     
 def extract_tag_chunks(text:str, tag: str) -> list:

@@ -22,7 +22,7 @@ def foxnews_parse_article_content(article_element: str):
             "uri": uri,
             "headline": a_tag.text.strip(),
             "uuid": f"{uuid_base}{uri_suffix}",
-            "categories": [uri.split("/")[3] if len(uri.split("/")) > 3 else None],
+            "category": uri.split("/")[3] if len(uri.split("/")) > 3 else '',
             "images": [],
             'ttl': "86400",  # 24 hours
         }
