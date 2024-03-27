@@ -1,7 +1,7 @@
 # This file: lambda/fetch_html/lambda_function.py
 # To install a library in the current directory:
 # pip3 install requests --target .
-
+# @todo logging
 import requests
 import json
 import boto3
@@ -10,27 +10,41 @@ from bs4 import BeautifulSoup
 
 s3_client = boto3.client('s3')
 
-def lambda_handler(event, context):
+def lambda_handler(event: list, context: list) -> list:
     
-    news_site_html = fetch_html_from_news_site(event['news_site_url'], event['container_tag'])
-    containers = parse_html_into_containers(news_site_html, event['container_tag'])
-    
-    # Convert containers into json and convert into bytes
-    containers_json_data_bytes = json.dumps(containers).encode('utf-8')
-    
-    # Generate a unique S3 key for the articles
-    s3_key = f'kdaviesnz.{event['news_site_url'].replace("//", "_").replace(":", "_")}.json'
+    try: 
 
-    # Store articles in a bucket
-    bucket = "kdaviesnz-news-bucket"
-    s3_client.put_object(Body=containers_json_data_bytes, Bucket=bucket, Key=s3_key)
+        news_site_url = event['news_site_url']
+                              
+        news_site_html = fetch_html_from_news_site(news_site_url, event['container_tag'])
+        containers = parse_html_into_containers(news_site_html, event['container_tag'])
+        
+        # Convert containers into json and convert into bytes
+        containers_json_data_bytes = json.dumps(containers).encode('utf-8')
+        
+        # Generate a unique S3 key for the articles
+        s3_key = f'kdaviesnz.{news_site_url.replace("//", "_").replace(":", "_")}.json'
 
-    # Generate a presigned URL for the S3 object
-    containers_json_url = s3_client.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': bucket, 'Key': s3_key},
-        ExpiresIn=432000   # URL expiration time (e.g., 5 days)
-    )
+        # Store articles in a bucket
+        bucket = "kdaviesnz-news-bucket"
+        s3_client.put_object(Body=containers_json_data_bytes, Bucket=bucket, Key=s3_key)
+
+        # Generate a presigned URL for the S3 object
+        containers_json_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': s3_key},
+            ExpiresIn=432000   # URL expiration time (e.g., 5 days)
+        )
+
+    except KeyError as ke:
+        # Handle missing keys in the event dictionary
+        return {'statusCode': 400, 'error': 'Missing key in the event data.'}
+
+    except Exception as e:
+        return {
+            'statusCode':500,
+            'error': e
+        }
     
     # Articles JSON url: https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json%3FAWSAccessKeyId%3DAKIA42RD47OJM3V6Q2HU%26Signature%3DVjtNNUSaPPVJG0XyxygUIMxnJQU%253D%26Expires%3D1711854291.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=t6uNdP5KV1zFHvPWe8q8P8zODyM%3D&Expires=1711854427
     return {
