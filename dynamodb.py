@@ -1,15 +1,6 @@
-# see https://docs.aws.amazon.com/code-library/latest/ug/python_3_dynamodb_code_examples.html
-
-# Create news article table
-# @see https://docs.aws.amazon.com/goto/boto3/dynamodb-2012-08-10/CreateTable
-
-# @see https://github.com/awsdocs/aws-doc-sdk-examples
-# @see https://github.com/awsdocs/aws-doc-sdk-examples/tree/main/python/example_code/dynamodb
-
-# python -m pip install -r requirements.txt
-
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
+# https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/python/example_code/dynamodb/GettingStarted/scenario_getting_started_movies.py#L80
 
 """
 Purpose
@@ -35,17 +26,7 @@ from zipfile import ZipFile
 import boto3
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
-#from question import Question
-
-from datetime import datetime
-from scraper import fetch_html
-from scraper import get_article_containers
-from foxnews import foxnews_parse_article_content
-from bs4 import BeautifulSoup
-from typing import List, Dict
-import requests
-import time
-from boto3.dynamodb.conditions import Attr
+from question import Question
 
 logger = logging.getLogger(__name__)
 # snippet-end:[python.example_code.dynamodb.helper.Movies.imports]
@@ -53,47 +34,19 @@ logger = logging.getLogger(__name__)
 
 # snippet-start:[python.example_code.dynamodb.helper.Movies.class_full]
 # snippet-start:[python.example_code.dynamodb.helper.Movies.class_decl]
-class NewsArticles:
+class Movies:
+    """Encapsulates an Amazon DynamoDB table of movie data."""
 
-    def __init__(self, dyn_resource, news_articles):
+    def __init__(self, dyn_resource):
         """
         :param dyn_resource: A Boto3 DynamoDB resource.
-        :param news_articles: List of news articles. Each article id is a dictionary object.
         """
         self.dyn_resource = dyn_resource
-        self.news_articles = news_articles
         # The table variable is set during the scenario in the call to
         # 'exists' if the table exists. Otherwise, it is set by 'create_table'.
         self.table = None
 
     # snippet-end:[python.example_code.dynamodb.helper.Movies.class_decl]
-
-    def remove_dead_news_articles(self):
-        """
-        Removes records where there is no 'ttl' field or where the sum of 'ttl' and 'time_added' is less than the current time.
-        """
-        try:
-            current_timestamp = Decimal(str(time.mktime(datetime.now().timetuple())))
-
-            # Scan the table to fetch all items
-            response = self.table.scan()
-
-            # Iterate through the scanned items and remove those that meet the criteria
-            for item in response["Items"]:
-                ttl = item.get("ttl")
-                time_added = item.get("timestamp")
-
-                if ttl is None or (time_added is not None and (ttl + time_added) < current_timestamp):
-                    self.table.delete_item(Key={"uuid": item["uuid"]})
-        except ClientError as err:
-            logger.error(
-                "Couldn't remove expired records. Here's why: %s: %s",
-                err.response["Error"]["Code"],
-                err.response["Error"]["Message"],
-            )
-            raise
-
-
 
     # snippet-start:[python.example_code.dynamodb.DescribeTable]
     def exists(self, table_name):
@@ -105,8 +58,7 @@ class NewsArticles:
         :return: True when the table exists; otherwise, False.
         """
         try:
-            table = self.dyn_resource.Table(table_name)
-            table.load()
+
             exists = True
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -187,75 +139,82 @@ class NewsArticles:
         else:
             return tables
 
-    def write_news_articles(self, news_articles, batch_size):
-        """
-        Fills an Amazon DynamoDB table with the specified data, using batch writing for better performance.
+    # snippet-end:[python.example_code.dynamodb.ListTables]
 
-        :param news_articles: The data to put in the table. Each item must contain at least
-                    the keys required by the schema that was specified when the
-                    table was created.
+    # snippet-start:[python.example_code.dynamodb.BatchWriteItem]
+    def write_batch(self, movies):
+        """
+        Fills an Amazon DynamoDB table with the specified data, using the Boto3
+        Table.batch_writer() function to put the items in the table.
+        Inside the context manager, Table.batch_writer builds a list of
+        requests. On exiting the context manager, Table.batch_writer starts sending
+        batches of write requests to Amazon DynamoDB and automatically
+        handles chunking, buffering, and retrying.
+
+        :param movies: The data to put in the table. Each item must contain at least
+                       the keys required by the schema that was specified when the
+                       table was created.
         """
         try:
             with self.table.batch_writer() as writer:
-                for i in range(0, len(news_articles), batch_size):
-                    batch = news_articles[i:i+batch_size]
-                    for news_article in batch:
-                        response = self.table.get_item(Key={"uuid": news_article["uuid"]})
-                        if "Item" not in response:
-                            news_article["timestamp"] = Decimal(str(time.mktime(datetime.now().timetuple())))
-                            writer.put_item(Item=news_article)
+                for movie in movies:
+                    writer.put_item(Item=movie)
         except ClientError as err:
             logger.error(
-                "Couldn't load data into table using write_news_articles %s. Here's why: %s: %s",
+                "Couldn't load data into table %s. Here's why: %s: %s",
                 self.table.name,
                 err.response["Error"]["Code"],
                 err.response["Error"]["Message"],
             )
             raise
 
+    # snippet-end:[python.example_code.dynamodb.BatchWriteItem]
 
-    def add_news_article(self, news_article):
+    # snippet-start:[python.example_code.dynamodb.PutItem]
+    def add_movie(self, title, year, plot, rating):
         """
-        Adds a news article to the table if there is no existing record with the same uuid.
+        Adds a movie to the table.
 
-        :param news_article: Dictionary object containing news article data
+        :param title: The title of the movie.
+        :param year: The release year of the movie.
+        :param plot: The plot summary of the movie.
+        :param rating: The quality rating of the movie.
         """
-        # Adding timestamp to the news article
-        news_article["timestamp"] = Decimal(str(time.mktime(datetime.now().timetuple())))
-
         try:
-            # Check if a record with the same uuid already exists
-            response = self.table.get_item(Key={"uuid": news_article["uuid"]})
-            if response.get("Item"):
-                logger.warning("Skipping addition of news article %s. Record with the same uuid already exists.", news_article["uuid"])
-                return
-            
-            # If no existing record found, add the news article
-            self.table.put_item(Item=news_article)
+            self.table.put_item(
+                Item={
+                    "year": year,
+                    "title": title,
+                    "info": {"plot": plot, "rating": Decimal(str(rating))},
+                }
+            )
         except ClientError as err:
             logger.error(
-                "Couldn't add news article %s to table %s. Here's why: %s: %s",
-                news_article,
+                "Couldn't add movie %s to table %s. Here's why: %s: %s",
+                title,
                 self.table.name,
                 err.response["Error"]["Code"],
                 err.response["Error"]["Message"],
             )
             raise
 
-    # "uuid" is used as a unique field
-    def get_news_article(self, uuid):
-        """
-        Gets news article from dynamoDB
+    # snippet-end:[python.example_code.dynamodb.PutItem]
 
-        :param uuid: Unique value to identify the news article. 
-        :return: News article data.
+    # snippet-start:[python.example_code.dynamodb.GetItem]
+    def get_movie(self, title, year):
+        """
+        Gets movie data from the table for a specific movie.
+
+        :param title: The title of the movie.
+        :param year: The release year of the movie.
+        :return: The data about the requested movie.
         """
         try:
-            response = self.table.get_item(Key={"uuid": uuid})
+            response = self.table.get_item(Key={"year": year, "title": title})
         except ClientError as err:
             logger.error(
-                "Couldn't get news article %s from table %s. Here's why: %s: %s",
-                uuid,
+                "Couldn't get movie %s from table %s. Here's why: %s: %s",
+                title,
                 self.table.name,
                 err.response["Error"]["Code"],
                 err.response["Error"]["Message"],
@@ -264,6 +223,7 @@ class NewsArticles:
         else:
             return response["Item"]
 
+    # snippet-end:[python.example_code.dynamodb.GetItem]
 
     # snippet-start:[python.example_code.dynamodb.UpdateItem.UpdateExpression]
     def update_movie(self, title, year, rating, plot):
@@ -360,18 +320,19 @@ class NewsArticles:
     # snippet-end:[python.example_code.dynamodb.Scan]
 
     # snippet-start:[python.example_code.dynamodb.DeleteItem]
-    def delete_news_article(self, uuid):
+    def delete_movie(self, title, year):
         """
-        Deletes a news article from the table.
+        Deletes a movie from the table.
 
-        :param uuid: The uuid of the news article to delete.
+        :param title: The title of the movie to delete.
+        :param year: The release year of the movie to delete.
         """
         try:
-            self.table.delete_item(Key={"uuid": uuid})
+            self.table.delete_item(Key={"year": year, "title": title})
         except ClientError as err:
             logger.error(
-                "Couldn't delete news article %s. Here's why: %s: %s",
-                uuid,
+                "Couldn't delete movie %s. Here's why: %s: %s",
+                title,
                 err.response["Error"]["Code"],
                 err.response["Error"]["Message"],
             )
@@ -434,7 +395,6 @@ def get_sample_movie_data(movie_file_name):
 
 # snippet-end:[python.example_code.dynamodb.helper.get_sample_movie_data]
 
-    
 
 # snippet-start:[python.example_code.dynamodb.Scenario_GettingStartedMovies]
 def run_scenario(table_name, movie_file_name, dyn_resource):
@@ -583,34 +543,11 @@ def run_scenario(table_name, movie_file_name, dyn_resource):
     print("-" * 88)
 
 
-
 if __name__ == "__main__":
     try:
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-        html = fetch_html("https://www.foxnews.com/")
-        #print(html)
-        # @see https://www.crummy.com/software/BeautifulSoup/bs4/doc/
-        soup = BeautifulSoup(html, features="html.parser")
-        news_articles = get_article_containers(soup=soup, tag="article", parse_fn=foxnews_parse_article_content)
-        news_articles_object = NewsArticles(dyn_resource=boto3.resource("dynamodb"), news_articles=news_articles)
-        table = news_articles_object.dyn_resource.Table("NewsArticles")
-        table.load()
-        news_articles_object.table = table
-        # def add_news_article(self, news_article):
-        #i = 2
-        #news_articles_object.add_news_article(news_articles[i])
-        #print(news_articles[i]["uuid"])
-        #news_article_from_dynamodb = news_articles_object.get_news_article(news_articles[i]["uuid"])
-        news_articles_object.remove_dead_news_articles()
-        news_articles_from_dynamodb = news_articles_object.write_news_articles(news_articles=news_articles, batch_size=25)
-        print(news_articles_from_dynamodb)
-
-        """
         run_scenario(
             "doc-example-table-movies", "moviedata.json", boto3.resource("dynamodb")
         )
-        """
     except Exception as e:
         print(f"Something went wrong with the demo! Here's what: {e}")
-
 # snippet-end:[python.example_code.dynamodb.Scenario_GettingStartedMovies]
