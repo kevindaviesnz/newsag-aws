@@ -1,4 +1,4 @@
-# This file: lambda/fetch_html/lambda_function.py
+# This file: lambda/parse_news_site_into_S3/lambda_function.py
 # To install a library in the current directory:
 # pip3 install requests --target .
 # @todo logging
@@ -23,7 +23,9 @@ def lambda_handler(event: list, context: list) -> list:
                               
         news_site_html = fetch_html_from_news_site(news_site_url, event['container_tag'])
         containers = parse_html_into_containers(news_site_html, event['container_tag'])
-        
+
+        print('containers')        
+        print(containers)
         # Convert containers into json and convert into bytes
         containers_json_data_bytes = json.dumps(containers).encode('utf-8')
         
@@ -63,7 +65,7 @@ def lambda_handler(event: list, context: list) -> list:
     }
     
 def extract_tag_chunks(text:str, tag: str) -> list:
-    pattern = r"<" + tag + r".*?</" + tag + r">"
+    pattern = r"<" + tag + r"(?:\s+[^>]*?)?>.*?</" + "div" + r">"
     chunks = re.findall(pattern, text, re.DOTALL)
     return chunks
 
@@ -80,8 +82,16 @@ def fetch_html_from_news_site(news_site_url:str, container_tag: str) -> str:
 
 def parse_html_into_containers(news_site_html: str, container_tag: str) ->list:
 
+    print('parsed html')
+    print(news_site_html)
+    
+    print('container tag:')
+    print(container_tag)
     soup = BeautifulSoup(news_site_html, 'html.parser')
-    container_tag = container_tag
+    container_tag = "<" + container_tag + ">"
+    print('container tag:')
+    print(container_tag)
+    container_tag = '<div class=\"c-NewsTile-item\">'
 
     # Extract the containers html directly into an array
     return [element.prettify() for element in soup.find_all(container_tag)]
@@ -91,9 +101,16 @@ def parse_html_into_containers(news_site_html: str, container_tag: str) ->list:
 
 if __name__ == "__main__":
     
+    '''
     event = {
         "news_site_url":"https://foxnews.com",
-        "container_tag":"article"
+        "container_tag":'div class="m"'
+    }
+    '''
+
+    event = {
+        "news_site_url":"https://www.newshub.co.nz/home.html",
+        "container_tag": 'div class="c-NewsTile"'
     }
     
     result = lambda_handler(event=event, context=None)
