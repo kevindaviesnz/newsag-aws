@@ -15,13 +15,11 @@ def foxnews_parse_article_content(article_element: str):
     
     if a_tag:
         uri = a_tag.get('href')
-        uuid_base = a_tag.get("data-omtr-intcmp")
-        uri_suffix = uri.rsplit("/", 1)[-1].replace("-", "_")
 
         article_container = {
             "uri": uri,
             "headline": a_tag.text.strip(),
-            "uuid": f"{uuid_base}{uri_suffix}",
+            "uuid": str(uuid.uuid4()),
             "category": uri.split("/")[3] if len(uri.split("/")) > 3 else '',
             "images": [],
             'ttl': "86400",  # 24 hours
