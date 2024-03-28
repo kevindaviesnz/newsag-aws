@@ -23,21 +23,19 @@ def remove_expired_news():
         current_timestamp = int(datetime.datetime.now().timestamp())
         
         response = table.scan(
-            FilterExpression=boto3.dynamodb.conditions.Attr('ttl').lt(current_timestamp)
-        )  # Filter for items with ttl less than current time
+            FilterExpression=boto3.dynamodb.conditions.Attr('ttl').lt(current_timestamp - boto3.dynamodb.conditions.Attr('ts') )
+        ) 
 
         items = response['Items']
         
         for item in items:
             # @see https://www.bitslovers.com/crud-with-python-and-dynamodb/
             # @see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/delete_item.html
-            # Delete only if ttl has indeed expired, as it might have been updated
-            if item['ttl'] * 1 < current_timestamp:
-                table.delete_item(
-                    Key={
-                        'uuid': item['uuid'],
-                        'category': item['category']
-                    }
+            table.delete_item(
+                Key={
+                    'uuid': item['uuid'],
+                    'category': item['category']
+                }
         )
         
     except ValidationError as err:

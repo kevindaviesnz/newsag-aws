@@ -3,6 +3,11 @@ import json
 import requests
 import boto3
 import uuid
+import datetime
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 s3_client = boto3.client('s3')
 
@@ -16,13 +21,17 @@ def foxnews_parse_article_content(article_element: str):
     if a_tag:
         uri = a_tag.get('href')
 
+        # Get current timestamp in seconds
+        current_timestamp = int(datetime.datetime.now().timestamp())
+
         article_container = {
             "uri": uri,
             "headline": a_tag.text.strip(),
             "uuid": str(uuid.uuid4()),
             "category": uri.split("/")[3] if len(uri.split("/")) > 3 else '',
             "images": [],
-            'ttl': "86400",  # 24 hours
+            'ttl': 86400,  # 24 hours
+            'ts': current_timestamp
         }
 
         # Find picture and img tags
@@ -32,28 +41,44 @@ def foxnews_parse_article_content(article_element: str):
             article_container["images"] = [src] 
 
         return article_container
+    
     else:
+
         return None
 
 def lambda_handler(event, context):
     # json items are contained in the `Items` array
-    response = requests.get(event["presigned_url"])
-    response.raise_for_status()  # Raise an exception for HTTP error responses
-    articles_json = response.json()  # This method parses the JSON response into a Python dict or list
-    event["Items"] = articles_json
-    articles = []
-    for item in event['Items']:
-        item_parsed = foxnews_parse_article_content(item)
-        if (item_parsed != None):
-            articles.append(item_parsed)
-    top_articles = articles[:10]
-    return top_articles
+    try:
+        response = requests.get(event["containers_json_url"])
+        response.raise_for_status()  # Raise an exception for HTTP error responses
+        articles_json = response.json()  # This method parses the JSON response into a Python dict or list
+        event["Items"] = articles_json
+        articles = []
+        for item in event['Items']:
+            item_parsed = foxnews_parse_article_content(item)
+            if (item_parsed != None):
+                articles.append(item_parsed)
+        top_articles = articles[:50]
+        return top_articles
+    
+    except Exception as err:
+
+        logger.error(
+            "Error when parsing news data into json. %s: %s", 
+            err.response["Error"]["Code"], 
+            err.response["Error"]["Message"]
+        )
+
+        return {
+            'statusCode':500,
+            'error': err
+        }
 
 
 if __name__ == "__main__":
     event = {
-        "presigned_url":"https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=bm9CN7GsuUmb0M6VrQWdjiVysCI%3D&Expires=1711163704",
-        "tag": "article"        
+        "containers_json_url":"https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=bm9CN7GsuUmb0M6VrQWdjiVysCI%3D&Expires=1711163704",
+        "container_tag": "article"        
     }
     parsed_articles = lambda_handler(event=event, context=None)
     print(parsed_articles)

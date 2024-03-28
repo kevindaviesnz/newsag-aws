@@ -8,6 +8,11 @@ import boto3
 import re
 from bs4 import BeautifulSoup
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 s3_client = boto3.client('s3')
 
 def lambda_handler(event: list, context: list) -> list:
@@ -36,10 +41,17 @@ def lambda_handler(event: list, context: list) -> list:
             ExpiresIn=432000   # URL expiration time (e.g., 5 days)
         )
 
-    except Exception as e:
+    except Exception as err:
+
+        logger.error(
+            "Error when parsing news site. %s: %s", 
+            err.response["Error"]["Code"], 
+            err.response["Error"]["Message"]
+        )
+
         return {
             'statusCode':500,
-            'error': e
+            'error': err
         }
     
     # Articles JSON url: https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json%3FAWSAccessKeyId%3DAKIA42RD47OJM3V6Q2HU%26Signature%3DVjtNNUSaPPVJG0XyxygUIMxnJQU%253D%26Expires%3D1711854291.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=t6uNdP5KV1zFHvPWe8q8P8zODyM%3D&Expires=1711854427
