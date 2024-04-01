@@ -78,10 +78,10 @@ def foxnews_parse_article_content(article_element: str):
 
 if __name__ == "__main__":
     event = {
-        'statusCode': 200, 
-        'article_blocks_json_url': 'https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087', 
-        'article_block_tag': '<article class="article">', 
-        'news_site_url': 'https://www.foxnews.com'
+        "statusCode": 200, 
+        "article_blocks_json_url": "https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087",
+        "article_block_tag": "<article class=\"article\">", 
+        "news_site_url": "https://www.foxnews.com"
     }
     parsed_articles = lambda_handler(event=event, context=None)
     print(parsed_articles)
