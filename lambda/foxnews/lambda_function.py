@@ -3,8 +3,8 @@ from bs4 import BeautifulSoup
 import json
 import requests
 import boto3
-import uuid
 import datetime
+import hashlib
 
 import logging
 
@@ -25,7 +25,11 @@ def lambda_handler(event, context):
             if (item_parsed != None):
                 articles.append(item_parsed)
         top_articles = articles[:50]
-        return top_articles
+        
+        return {
+            "statusCode": 200,
+            "body": json.dumps(top_articles)
+        }
     
     except Exception as err:
 
@@ -57,7 +61,6 @@ def foxnews_parse_article_content(article_element: str):
         article_container = {
             "uri": uri,
             "headline": a_tag.text.strip(),
-            "uuid": str(uuid.uuid4()),
             "category": uri.split("/")[3] if len(uri.split("/")) > 3 else '',
             "images": [],
             'ttl': 86400,  # 24 hours
@@ -70,6 +73,9 @@ def foxnews_parse_article_content(article_element: str):
             src = f"http:{img_tag.get('src')}"
             article_container["images"] = [src] 
 
+        # Add a hash as id
+        article_container["id"] = hashlib.sha256(json.dumps(article_container, sort_keys=True).encode())
+        
         return article_container
     
     else:
