@@ -16,8 +16,7 @@ def test_foxnews_parse_article_content():
 
 def test_lambda_handler(test_data):
     event =  {
-        "containers_json_url":"https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=bm9CN7GsuUmb0M6VrQWdjiVysCI%3D&Expires=1711163704",
-        "container_tag": "article" 
+
     }
     result = lambda_handler(event, None)
 #    assert 'statusCode' in result

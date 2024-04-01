@@ -49,7 +49,7 @@ def lambda_handler(event: list, context: list) -> list:
         'article_block_tag': event['article_block_tag'],
         'news_site_url': event['news_site_url']
     }
-        
+
         
 def fetch_html_from_news_site(news_site_url:str) -> str:
     
@@ -60,6 +60,7 @@ def fetch_html_from_news_site(news_site_url:str) -> str:
 
 
 def parse_html_into_article_blocks(news_site_html: str, article_block_tag: str, **kwargs) -> list:
+
     soup = BeautifulSoup(news_site_html, 'html.parser')
     
     # Extract tag name and class attributes from article_block_tag
@@ -83,10 +84,18 @@ def parse_html_into_article_blocks(news_site_html: str, article_block_tag: str, 
 
 if __name__ == "__main__":
     
-    event = {
+    """
+        event = {
         "news_site_url":"https://www.newshub.co.nz/home.html",
-        "article_block_tag": '<div class="c-NewsTile"-item>'
+        "article_block_tag": "<div class=\"c-NewsTile\"-item>"
     }
-    
+
+    """
+
+    event = {
+        "news_site_url":"https://www.foxnews.com",
+        "article_block_tag": "<article class=\"article\">"
+    }
+
     result = lambda_handler(event=event, context=None)
     print(result)
