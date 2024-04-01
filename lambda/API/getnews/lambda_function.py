@@ -1,5 +1,6 @@
 import json
 import boto3
+from decimal import Decimal
 
 def lambda_handler(event, context):
     # Initialize DynamoDB client
@@ -9,8 +10,12 @@ def lambda_handler(event, context):
     # Query DynamoDB table for all items
     response = table.scan()
 
-    # Extract the items from the response
+    # Convert Decimal to string for JSON serialization
     items = response['Items']
+    for item in items:
+        for key, value in item.items():
+            if isinstance(value, Decimal):
+                item[key] = str(value)
 
     # Return the items as JSON
     return {
@@ -24,7 +29,7 @@ def lambda_handler(event, context):
 
 
 if __name__ == "__main__":
-    event = {
-    }
+    event = {}
     result = lambda_handler(event=event, context=None)
     print(result)
+
