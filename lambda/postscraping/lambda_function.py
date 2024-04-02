@@ -1,11 +1,8 @@
-# This file: lambda/postscraping/lambda_function.py
-# To install a library in the current directory:
-# pip3 install requests --target .
-# zip -r <output_zip_file> <directory_to_zip>
 import logging
 import boto3
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError, ValidationError
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -14,78 +11,28 @@ dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('NewsArticles') 
 
 def lambda_handler(event, context):
-    
     try:
-        articles = event['body'] 
+        articles = json.loads(event['body'])  # Parse JSON string to Python object
         filtered_articles = list(filter(filter_existing_articles, articles))
         return filtered_articles
-  
-    except ValidationError as err:
-        
+    except (ValidationError, ClientError) as err:
         logger.error(
-            "Validation error. %s: %s", 
+            "Error occurred: %s: %s", 
             err.response["Error"]["Code"], 
             err.response["Error"]["Message"]
         )
-
         raise
-
-    except ClientError as err:
-        
-        logger.error(
-            "Client error!!!. %s: %s", 
-            err.response["Error"]["Code"], 
-            err.response["Error"]["Message"]
-        )
-
-        raise
-          
 
 def filter_existing_articles(article):
     response = table.get_item(Key={'id': article["id"], 'category': article['category']})
-    if 'Item' in response:
-        return False
-    else:
-        return True    
-        
-        
-if __name__ == "__main__":
+    return 'Item' not in response
 
+if __name__ == "__main__":
     event = {
-        "statusCode": 200, 
-        "article_blocks_json_url": "https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087",
-        "article_block_tag": "<article class=\"article\">", 
-        "news_site_url": "https://www.foxnews.com",
-        "body": [
-            {
-                "id": "abc-123",
-                "uri": "https://example.com/article1",
-                "headline": "Sample Headline 1",
-                "category": "news",
-                "images": ["image1.jpg", "image2.jpg"],
-                "ttl": 86400,
-                "ts": "2024-04-02T12:00:00Z"
-            },
-            {
-                "id": "abc-124",
-                "uri": "https://example.com/article2",
-                "headline": "Sample Headline 2",
-                "category": "sports",
-                "images": ["image3.jpg", "image4.jpg"],
-                "ttl": 86400,
-                "ts": "2024-04-02T13:00:00Z"
-            },
-            {
-                "id": "abc-125",
-                "uri": "https://example.com/article3",
-                "headline": "Sample Headline 3",
-                "category": "world",
-                "images": [],
-                "ttl": 86400,
-                "ts": "2024-04-02T14:00:00Z"
-            }
-        ]
+        "statusCode": 200,
+        "body": "[{\"uri\": \"https://www.foxnews.com/politics/desantis-notches-win-lawsuit-migrant-flights-but-company-arranged-them-not-clear-yet\",\"headline\": \"Judge hands DeSantis major win in lawsuit over migrant flights to lux progressive vacation spot\", \"category\": \"politics\", \"images\": [\"http://a57.foxnews.com/prod-hp.foxnews.com/images/2024/04/720/405/8ee77673ac60dbf0a49c5c68bbae235e.jpg?tl=1&ve=1\"], \"ttl\": 86400, \"ts\": 1712022321, \"id\": \"dfdcf94b792aee172710f152205b8828e79d2e44bbc2f207b62735dfe4410cce\"}]",
+        "article_block_tag": "<article class=\"article\">",
+        "news_site_url": "https://www.foxnews.com"
     }
-    
     parsed_articles = lambda_handler(event=event, context=None)
     print(parsed_articles)
