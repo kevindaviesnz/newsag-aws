@@ -85,18 +85,20 @@ def parse_html_into_article_blocks(news_site_html: str, article_block_tag: str, 
 
 if __name__ == "__main__":
     
-    """
-        event = {
+
+    event = {
         "news_site_url":"https://www.newshub.co.nz/home.html",
         "article_block_tag": "<div class=\"c-NewsTile\"-item>"
     }
 
-    """
 
-    event = {
-        "news_site_url":"https://www.foxnews.com",
-        "article_block_tag": "<article class=\"article\">"
-    }
+    """
+        event = {
+            "news_site_url":"https://www.foxnews.com",
+            "article_block_tag": "<article class=\"article\">"
+        }
+
+    """
 
     result = lambda_handler(event=event, context=None)
     print(result)
