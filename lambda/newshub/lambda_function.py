@@ -6,6 +6,7 @@ import json
 import requests
 import uuid
 import datetime
+import hashlib
 
 import logging
 
@@ -32,8 +33,6 @@ def lambda_handler(event, context):
 
         logger.error(
             "Error when parsing news data into json. %s: %s", 
-            err.response["Error"]["Code"], 
-            err.response["Error"]["Message"]
         )
 
         return {
@@ -55,8 +54,26 @@ def newshub_parse_article_content(article_element: str):
         uri = a_tag.get('href')
         headline = soup.find('h3').text.strip()
 
+        category_map = {
+            "sports":"Sports",
+            "world": "World",
+            "lifestyle": "Lifestyle",
+            "politics":"Politics",
+            "media": "Media",
+            "category": "General",
+            "entertainment": "Entertainment",
+            "video":"General",
+            "us": "World",
+            "fox-news-travel": "Lifestyle",
+            "money": "Business",
+            "health": "Lifestyle",
+            "markets": "Business",
+        }
+
         category_container = soup.find('div', class_='c-NewsTile-storyTag')
         category = category_container.find('a').text.strip()
+
+        mapped_category = category_map.get(category.lower(), "General")
 
         # Get current timestamp in seconds
         current_timestamp = int(datetime.datetime.now().timestamp())
@@ -65,7 +82,7 @@ def newshub_parse_article_content(article_element: str):
             "uri": uri,
             "headline": headline,
             "uuid": str(uuid.uuid4()),
-            "category": category,
+            "category": mapped_category,
             "images": [],
             'ttl': 86400,  # 24 hours
             'ts': current_timestamp
@@ -76,6 +93,9 @@ def newshub_parse_article_content(article_element: str):
         if img_tag:
             src = img_tag.get('srcset')
             article_container["images"] = [src] 
+
+        hash_object = hashlib.sha256(json.dumps(article_container, sort_keys=True).encode())
+        article_container["id"] = hash_object.hexdigest()
 
         return article_container
     
