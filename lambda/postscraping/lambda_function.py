@@ -1,3 +1,7 @@
+# This file: lambda/postscraping/lambda_function.py
+# To install a library in the current directory:
+# pip3 install requests --target .
+# zip -r <output_zip_file> <directory_to_zip>
 import logging
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
@@ -46,42 +50,41 @@ def filter_existing_articles(article):
         
         
 if __name__ == "__main__":
-    sample_articles = [
-        {
-            "id": "abc-123",
-            "uri": "https://example.com/article1",
-            "headline": "Sample Headline 1",
-            "category": "news",
-            "images": ["image1.jpg", "image2.jpg"],
-            "ttl": 86400,
-            "ts": "2024-04-02T12:00:00Z"
-        },
-        {
-            "id": "abc-124",
-            "uri": "https://example.com/article2",
-            "headline": "Sample Headline 2",
-            "category": "sports",
-            "images": ["image3.jpg", "image4.jpg"],
-            "ttl": 86400,
-            "ts": "2024-04-02T13:00:00Z"
-        },
-        {
-            "id": "abc-125",
-            "uri": "https://example.com/article3",
-            "headline": "Sample Headline 3",
-            "category": "world",
-            "images": [],
-            "ttl": 86400,
-            "ts": "2024-04-02T14:00:00Z"
-        }
-    ]
 
     event = {
         "statusCode": 200, 
         "article_blocks_json_url": "https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087",
         "article_block_tag": "<article class=\"article\">", 
         "news_site_url": "https://www.foxnews.com",
-        "body": sample_articles
+        "body": [
+            {
+                "id": "abc-123",
+                "uri": "https://example.com/article1",
+                "headline": "Sample Headline 1",
+                "category": "news",
+                "images": ["image1.jpg", "image2.jpg"],
+                "ttl": 86400,
+                "ts": "2024-04-02T12:00:00Z"
+            },
+            {
+                "id": "abc-124",
+                "uri": "https://example.com/article2",
+                "headline": "Sample Headline 2",
+                "category": "sports",
+                "images": ["image3.jpg", "image4.jpg"],
+                "ttl": 86400,
+                "ts": "2024-04-02T13:00:00Z"
+            },
+            {
+                "id": "abc-125",
+                "uri": "https://example.com/article3",
+                "headline": "Sample Headline 3",
+                "category": "world",
+                "images": [],
+                "ttl": 86400,
+                "ts": "2024-04-02T14:00:00Z"
+            }
+        ]
     }
     
     parsed_articles = lambda_handler(event=event, context=None)

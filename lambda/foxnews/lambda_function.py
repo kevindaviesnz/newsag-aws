@@ -3,6 +3,7 @@
 # pip3 install requests --target .
 # zip -r <output_zip_file> <directory_to_zip>
 from bs4 import BeautifulSoup
+import requests
 import json
 import datetime
 import hashlib
@@ -12,13 +13,16 @@ logger = logging.getLogger(__name__)
 
 def lambda_handler(event, context):
     try:
-        raw_articles_data = event['body']
+
+        response = requests.get(event["article_blocks_json_url"])
+        response.raise_for_status()  # Raise an exception for HTTP error responses
+        articles_json = response.json()  # This method parses the JSON response into a Python dict or list
+        event["Items"] = articles_json
         articles = []
-        for item in raw_articles_data:
+        for item in event['Items']:
             item_parsed = foxnews_parse_article_content(item)
             if (item_parsed != None):
                 articles.append(item_parsed)
-                
         top_articles = articles[:50]
         
         return {
@@ -70,12 +74,12 @@ def foxnews_parse_article_content(article_element: str):
 if __name__ == "__main__":
     
     event = {
-        "statusCode": 200, 
-        "article_blocks_json_url": "https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087",
-        "article_block_tag": "<article class=\"article\">", 
-        "news_site_url": "https://www.foxnews.com",
-        "body": ["<article class=\"article story-1\">\n<div class=\"m\">\n<a data-adv=\"hp1bt\" data-omtr-intcmp=\"fnhpbt1\" href=\"https://www.foxnews.com/politics/biden-says-he-didnt-do-that-when-asked-about-proclaiming-easter-as-trans-day-of-visibility\">\n<picture>\n<source media=\"(max-width: 767px)\" srcset=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/343/193/Biden-Easter-bunny.jpg?tl=1&amp;ve=1, //a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/686/386/Biden-Easter-bunny.jpg?tl=1&amp;ve=1 2x\"/>\n<source media=\"(min-width: 768px) and (max-width: 1023px)\" srcset=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/720/405/Biden-Easter-bunny.jpg?tl=1&amp;ve=1, //a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/1440/810/Biden-Easter-bunny.jpg?tl=1&amp;ve=1 2x\"/>\n<source media=\"(min-width: 1024px) and (max-width: 1279px)\" srcset=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/540/304/Biden-Easter-bunny.jpg?tl=1&amp;ve=1, //a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/1080/608/Biden-Easter-bunny.jpg?tl=1&amp;ve=1 2x\"/>\n<source media=\"(min-width: 1280px) and (max-width: 1439px)\" srcset=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/520/293/Biden-Easter-bunny.jpg?tl=1&amp;ve=1, //a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/1040/586/Biden-Easter-bunny.jpg?tl=1&amp;ve=1 2x\"/>\n<source media=\"(min-width: 1440px)\" srcset=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/627/353/Biden-Easter-bunny.jpg?tl=1&amp;ve=1, //a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/1254/706/Biden-Easter-bunny.jpg?tl=1&amp;ve=1 2x\"/>\n<img alt=\"President Biden responds to backlash about proclaiming Easter as 'Trans Day of Visibility'\" height=\"405\" src=\"//a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2024/03/720/405/Biden-Easter-bunny.jpg?tl=1&amp;ve=1\" width=\"720\"/>\n</picture>\n<div class=\"kicker default\"><span class=\"kicker-text\">'I DIDN'T DO THAT'</span></div>\n</a>\n</div>\n<div class=\"info\">\n<header class=\"info-header\">\n<h3 class=\"title\">\n<a data-adv=\"hp1bt\" data-omtr-intcmp=\"fnhpbt1\" href=\"https://www.foxnews.com/politics/biden-says-he-didnt-do-that-when-asked-about-proclaiming-easter-as-trans-day-of-visibility\">President Biden responds to backlash about proclaiming Easter as 'Trans Day of Visibility'</a>\n</h3>\n</header>\n<div class=\"content\">\n</div>\n</div>\n</article>"]
+        'statusCode': 200, 
+        'article_blocks_json_url': 'https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__www.foxnews.com.json?AWSAccessKeyId=AKIA42RD47OJIMOJB6N5&Signature=hEYP2okJhUrIV9VkyxkmTt9I2L8%3D&Expires=1712364087', 
+        'article_block_tag': '<article class="article">', 
+        'news_site_url': 'https://www.foxnews.com'
     }
+
 
     parsed_articles = lambda_handler(event=event, context=None)
     print(parsed_articles)

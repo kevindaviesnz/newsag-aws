@@ -26,37 +26,29 @@ def lambda_handler(event: list, context: list) -> list:
     # Returns an array of articles
     article_blocks = parse_html_into_article_blocks(news_site_html=news_site_html, article_block_tag=event['article_block_tag'])
     
-    # Convert containers into json and convert into bytes
-    # article_blocks_json_data_bytes = json.dumps(article_blocks).encode('utf-8')
+    #Convert containers into json and convert into bytes
+    article_blocks_json_data_bytes = json.dumps(article_blocks).encode('utf-8')
 
     # Generate a unique S3 key for the articles
-    #s3_key = f'kdaviesnz.{news_site_url.replace("//", "_").replace(":", "_")}.json'
+    s3_key = f'kdaviesnz.{news_site_url.replace("//", "_").replace(":", "_")}.json'
 
     # Store article bloocks in a bucket as json
-    # bucket = "kdaviesnz-news-bucket"
-    # s3_client.put_object(Body=article_blocks_json_data_bytes, Bucket=bucket, Key=s3_key)
+    bucket = "kdaviesnz-news-bucket"
+    s3_client.put_object(Body=article_blocks_json_data_bytes, Bucket=bucket, Key=s3_key)
 
     # Generate a presigned URL for the S3 object
-    """
     article_blocks_json_url = s3_client.generate_presigned_url(
         'get_object',
         Params={'Bucket': bucket, 'Key': s3_key},
         ExpiresIn=432000   # URL expiration time (e.g., 5 days)
     )
+
     # Articles JSON url: https://kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__kdaviesnz-news-bucket.s3.amazonaws.com/kdaviesnz.https__foxnews.com.json%3FAWSAccessKeyId%3DAKIA42RD47OJM3V6Q2HU%26Signature%3DVjtNNUSaPPVJG0XyxygUIMxnJQU%253D%26Expires%3D1711854291.json?AWSAccessKeyId=AKIA42RD47OJM3V6Q2HU&Signature=t6uNdP5KV1zFHvPWe8q8P8zODyM%3D&Expires=1711854427
     return {
         'statusCode': 200,
         'article_blocks_json_url': article_blocks_json_url,
         'article_block_tag': event['article_block_tag'],
         'news_site_url': event['news_site_url']
-    }
-
-    """
-    return {
-        'statusCode': 200,
-        'article_block_tag': event['article_block_tag'],
-        'news_site_url': event['news_site_url'],
-        'body': article_blocks
     }
 
     
