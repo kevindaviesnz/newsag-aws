@@ -49,10 +49,29 @@ def foxnews_parse_article_content(article_element: str):
         uri = a_tag.get('href')
         current_timestamp = int(datetime.datetime.now().timestamp())
 
+        category_map = {
+            "sports":"Sports",
+            "world": "World",
+            "lifestyle": "Lifestyle",
+            "politics":"Politics",
+            "media": "Media",
+            "category": "General",
+            "entertainment": "Entertainment",
+            "video":"General",
+            "us": "World",
+            "fox-news-travel": "Lifestyle",
+            "money": "Business",
+            "health": "Lifestyle",
+            "markets": "Business",
+        }
+
+        category = uri.split("/")[3] if len(uri.split("/")) > 3 else ''
+        mapped_category = category_map.get(category.lower(), "General")
+        
         article_container = {
             "uri": uri,
             "headline": a_tag.text.strip(),
-            "category": uri.split("/")[3] if len(uri.split("/")) > 3 else '',
+            "category": mapped_category,
             "images": [],
             'ttl': 86400,  # 24 hours
             'ts': current_timestamp
