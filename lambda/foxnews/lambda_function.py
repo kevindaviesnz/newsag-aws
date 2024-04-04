@@ -1,7 +1,3 @@
-# This file: lambda/foxnews/lambda_function.py
-# To install a library in the current directory:
-# pip3 install requests --target .
-# zip -r <output_zip_file> <directory_to_zip>
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -13,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 def lambda_handler(event, context):
     try:
-
         response = requests.get(event["article_blocks_json_url"])
         response.raise_for_status()  # Raise an exception for HTTP error responses
         articles_json = response.json()  # This method parses the JSON response into a Python dict or list
@@ -21,16 +16,13 @@ def lambda_handler(event, context):
         articles = []
         for item in event['Items']:
             item_parsed = foxnews_parse_article_content(item)
-            if (item_parsed != None):
+            if item_parsed:  # Check if item_parsed is not None
                 articles.append(item_parsed)
         top_articles = articles[:50]
         
-        return {
-            "statusCode": 200,
-            "body": json.dumps(top_articles),
-            "article_block_tag": event["article_block_tag"],
-            "news_site_url": event["news_site_url"]
-        }
+        return top_articles
+
+        
     
     except Exception as err:
         logger.error("Error when parsing news data into json. %s", err)
@@ -80,15 +72,17 @@ def foxnews_parse_article_content(article_element: str):
         img_tag = soup.find('img')
         if img_tag:
             src = f"http:{img_tag.get('src')}"
-            article_container["images"] = [src] 
+            # Check if the image is not a GIF file
+            if not src.lower().endswith('.gif'):
+                article_container["images"] = [src]
 
-        hash_object = hashlib.sha256(json.dumps(article_container, sort_keys=True).encode())
-        article_container["id"] = hash_object.hexdigest()
-        
-        return article_container
+        # Check if the article has images before returning
+        if article_container["images"]:
+            hash_object = hashlib.sha256(json.dumps(article_container, sort_keys=True).encode())
+            article_container["id"] = hash_object.hexdigest()
+            return article_container
     
-    else:
-        return None
+    return None  # Return None if the article doesn't have images
 
 if __name__ == "__main__":
     
@@ -99,7 +93,5 @@ if __name__ == "__main__":
         'news_site_url': 'https://www.foxnews.com'
     }
 
-
     parsed_articles = lambda_handler(event=event, context=None)
     print(parsed_articles)
-
